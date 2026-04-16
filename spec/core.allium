@@ -1,0 +1,139 @@
+-- allium: 3
+-- Core specification for the town-names-openttd library.
+-- Covers GRF source configuration and town name generation.
+--
+-- The library parses NewGRF Action 0F (town name generator) data from
+-- one or more GRF files and produces random town names via weighted
+-- random selection across all loaded sources. All sources contribute
+-- to a single combined pool; no source is favoured over another.
+
+------------------------------------------------------------
+-- Given
+------------------------------------------------------------
+
+given {
+    registry: BundledGrfRegistry
+}
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+external entity BundledGrfRegistry {
+    -- The set of NewGRF files packaged within the library JAR.
+    -- Populated at runtime by scanning the /grf/ directory on the
+    -- classpath (the JAR's bundled resources). Each .grf file found
+    -- there contributes its stem name (filename without extension) to
+    -- available_names. Managed outside this specification.
+    available_names: List<String>
+}
+
+------------------------------------------------------------
+-- Entities and Variants
+------------------------------------------------------------
+
+entity NameGenerator {
+    bundled_sources: List<String>   -- names referencing bundled GRFs e.g. "uk-towns"
+    file_sources: List<String>      -- absolute file system paths to valid .grf files
+    seed: Integer?
+
+    total_sources: bundled_sources.count + file_sources.count
+    is_seeded: seed != null
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+rule CreateGenerator {
+    when: CreateGenerator(bundled_sources, file_sources, seed?)
+    requires: bundled_sources.all(n => n in registry.available_names)
+    let valid_files = readable_grf_files(file_sources)
+    let invalid_files = unreadable_grf_files(file_sources)
+    requires: bundled_sources.count + valid_files.count > 0
+    ensures:
+        let generator = NameGenerator.created(
+            bundled_sources: bundled_sources,
+            file_sources: valid_files,
+            seed: seed
+        )
+        GeneratorCreated(generator: generator, skipped_sources: invalid_files)
+
+    @guidance
+        -- readable_grf_files filters file_sources to those that are both
+        -- accessible on the file system and contain parseable Action 0F data.
+        -- unreadable_grf_files is the complement set.
+        -- If at least one source is valid (bundled or file), a generator is
+        -- returned together with any skipped sources as warnings. If all
+        -- sources are invalid, the requires fails and the caller receives
+        -- an error with no generator.
+        -- Unknown bundled names (not in registry.available_names) always
+        -- cause an immediate failure — they indicate a developer error.
+}
+
+rule GenerateName {
+    when: GenerateName(generator)
+    ensures: NameGenerated(name: generate_name(generator))
+
+    @guidance
+        -- Name generation applies uniform random selection: all Action 0F
+        -- parts from all loaded GRF sources are combined into a single pool.
+        -- Within each part, selection probability follows the part's declared
+        -- weight. When the generator has a seed, all selections are deterministic.
+}
+
+rule GenerateNames {
+    when: GenerateNames(generator, count)
+    requires: count > 0
+    ensures: NamesGenerated(names: generate_names(generator, count))
+
+    @guidance
+        -- GenerateNames(generator, n) is semantically equivalent to n
+        -- sequential GenerateName calls on the same generator instance.
+        -- Seeded determinism applies: the same seed produces the same
+        -- sequence regardless of whether names are requested one at a time
+        -- or in bulk.
+}
+
+------------------------------------------------------------
+-- Invariants
+------------------------------------------------------------
+
+invariant GeneratorHasSources {
+    for g in NameGenerators:
+        g.total_sources > 0
+}
+
+@invariant DeterministicWithSeed
+    -- Two NameGenerators with identical seed, identical bundled_sources
+    -- (same names in the same order) and identical file_sources (same
+    -- paths in the same order) produce byte-identical name sequences
+    -- for any identical sequence of GenerateName calls. GenerateNames(g, n)
+    -- produces the same sequence as n sequential GenerateName calls on g.
+
+@invariant GeneratedNamesNonEmpty
+    -- Every name returned by GenerateName or GenerateNames is a
+    -- non-empty String containing at least one printable character.
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+surface NameGenerationApi {
+    provides:
+        CreateGenerator(bundled_sources, file_sources, seed?)
+        GenerateName(generator)
+        GenerateNames(generator, count)
+
+    @guarantee IsolatedGeneratorState
+        -- Each NameGenerator instance holds independent RNG state.
+        -- Operations on one generator do not affect any other generator.
+
+    @guidance
+        -- CreateGenerator emits GeneratorCreated(generator, skipped_sources).
+        -- skipped_sources is empty when all file_sources were valid.
+        -- When skipped_sources is non-empty, the generator is still usable;
+        -- callers may log or surface the skipped paths as warnings.
+        -- To discover available bundled GRF names, callers inspect
+        -- registry.available_names from the module-level BundledGrfRegistry.
+}

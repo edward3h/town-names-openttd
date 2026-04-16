@@ -1,0 +1,181 @@
+-- allium: 3
+-- Bananas client specification for the town-names-openttd library.
+-- Covers searching and downloading NewGRF files from the OpenTTD Bananas
+-- content server (bananas-api.openttd.org), with local file system caching.
+--
+-- Cache design: files are keyed by ContentId (grfid + md5sum) and version.
+-- The cache is grow-only; no eviction mechanism is provided in this version.
+
+use "./core.allium" as core
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+external entity BananasServer {
+    -- The OpenTTD Bananas REST API at bananas-api.openttd.org.
+    -- Availability and content are managed outside this specification.
+}
+
+------------------------------------------------------------
+-- Value Types
+------------------------------------------------------------
+
+value ContentId {
+    -- Uniquely identifies a NewGRF on the Bananas server.
+    grfid: String
+    md5sum: String
+}
+
+------------------------------------------------------------
+-- Entities and Variants
+------------------------------------------------------------
+
+entity BananasEntry {
+    -- Metadata for a single NewGRF file available on the Bananas server.
+    content_id: ContentId
+    version: String
+    name: String
+    description: String?
+    licence: String     -- British English spelling; maps to "license" in the Bananas REST API
+    author: String
+}
+
+entity BananasClient {
+    cache_directory: String
+    -- cache_directory supports tilde expansion: "~" resolves to
+    -- System.getProperty("user.home") at runtime.
+}
+
+entity CachedGrf {
+    -- A NewGRF file that has been fully downloaded and stored locally.
+    -- Keyed on content_id + version; these two fields uniquely identify
+    -- a cached file. The entry's name/author/licence fields are not part
+    -- of the cache key.
+    --
+    -- Persistence: CachedGrf records are not stored in a separate index.
+    -- On each BananasClient construction, the cache_directory is scanned
+    -- and CachedGrf instances are reconstructed from files present on disk.
+    -- File names encode the cache key: "{grfid}_{md5sum}_{version}.grf".
+    -- A file present on disk implies it was fully written (guaranteed by
+    -- the atomic write-then-move in fetch_from_bananas).
+    content_id: ContentId
+    version: String
+    local_path: String
+}
+
+------------------------------------------------------------
+-- Config
+------------------------------------------------------------
+
+config {
+    default_cache_directory: String = "~/.cache/town-names-openttd"
+    -- "~" is resolved to System.getProperty("user.home") at runtime.
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+rule CreateClient {
+    when: CreateBananasClient(cache_directory?)
+    ensures: BananasClient.created(
+        cache_directory: cache_directory ?? config.default_cache_directory
+    )
+}
+
+rule SearchBananas {
+    when: SearchBananas(client, query)
+    -- query is a free-text String; may be empty to list all town-name GRFs.
+    ensures: BananasSearchCompleted(
+        results: search_bananas_server(client, query)
+    )
+
+    @guidance
+        -- search_bananas_server filters to NewGRF content of type "town_names"
+        -- only. A query may return zero results without error.
+        -- If the server is unreachable, the operation fails and the exception
+        -- propagates to the caller; no partial result is returned.
+}
+
+rule DownloadGrfCached {
+    when: DownloadGrf(client, entry)
+    let cached = CachedGrf{content_id: entry.content_id, version: entry.version}
+    requires: exists cached
+    ensures: GrfDownloaded(local_path: cached.local_path)
+}
+
+rule DownloadGrfFetch {
+    when: DownloadGrf(client, entry)
+    let cached = CachedGrf{content_id: entry.content_id, version: entry.version}
+    requires: not exists cached
+    ensures:
+        let local_path = fetch_from_bananas(client, entry)
+        CachedGrf.created(
+            content_id: entry.content_id,
+            version: entry.version,
+            local_path: local_path
+        )
+        GrfDownloaded(local_path: local_path)
+
+    @guidance
+        -- fetch_from_bananas must write atomically: download to a temporary
+        -- path first, then move to the final cache path. CachedGrf is only
+        -- created after the move succeeds, so local_path always refers to a
+        -- complete file. If the download is interrupted before the move, no
+        -- CachedGrf is created and the temporary file is cleaned up.
+        -- If the server is unreachable or the download fails, the exception
+        -- propagates to the caller and the cache is not modified.
+}
+
+------------------------------------------------------------
+-- Invariants
+------------------------------------------------------------
+
+invariant UniqueCacheEntryPerContentVersion {
+    for a in CachedGrfs:
+        for b in CachedGrfs:
+            a != b implies
+                a.content_id != b.content_id or a.version != b.version
+}
+
+@invariant CachedFileIsComplete
+    -- The local_path of every CachedGrf refers to a file that exists on
+    -- the local file system and was fully written (no partial downloads).
+    -- This is guaranteed by the atomic write-then-move in fetch_from_bananas.
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+surface BananasClientApi {
+    provides:
+        CreateBananasClient(cache_directory?)
+        SearchBananas(client, query)
+        DownloadGrf(client, entry)
+
+    @guarantee NoDuplicateDownloads
+        -- Calling DownloadGrf for an entry whose content_id and version are
+        -- already in the cache never triggers a network request.
+
+    @guarantee CacheGrowOnly
+        -- The cache directory is append-only in this version.
+        -- Existing cached files are never removed or overwritten.
+
+    @guarantee SearchResultsOrdering
+        -- Result ordering from SearchBananas follows server-defined ordering.
+        -- No client-side sort is applied.
+
+    @guarantee ThreadSafetyOutOfScope
+        -- Concurrent use of a single BananasClient instance is not specified
+        -- in this version. Callers requiring thread safety must synchronise
+        -- externally.
+
+    @guidance
+        -- The local_path returned via GrfDownloaded can be passed directly
+        -- to core/CreateGenerator as a file_sources entry.
+        -- Example flow: SearchBananas → pick entry → DownloadGrf →
+        -- pass local_path to core/CreateGenerator.
+        -- Network failures in SearchBananas and DownloadGrf propagate as
+        -- exceptions; callers are responsible for retry logic.
+}
