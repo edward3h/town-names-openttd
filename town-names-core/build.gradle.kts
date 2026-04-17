@@ -1,87 +1,17 @@
 import java.net.URL
+import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
-    `java-library`
-    `maven-publish`
-    signing
-}
-
-group = "red.ethel"
-version = "0.1.0-SNAPSHOT"
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
-    withJavadocJar()
-    withSourcesJar()
-}
-
-dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter:5.14.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
+    id("java-convention")
+    id("publishing-convention")
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            artifactId = "town-names-core"
-            from(components["java"])
-            pom {
-                name = "town-names-core"
-                description = "Generate random town names from OpenTTD NewGRF files"
-                url = "https://github.com/edward3h/town-names-openttd"
-                licenses {
-                    license {
-                        name = "GNU General Public License v2.0 or later"
-                        url = "https://www.gnu.org/licenses/gpl-2.0.html"
-                    }
-                }
-                developers {
-                    developer {
-                        id = "edward3h"
-                        email = "jaq@ethelred.org"
-                    }
-                }
-                scm {
-                    connection = "scm:git:git://github.com/edward3h/town-names-openttd.git"
-                    developerConnection = "scm:git:ssh://github.com/edward3h/town-names-openttd.git"
-                    url = "https://github.com/edward3h/town-names-openttd"
-                }
-            }
+    publications.named<MavenPublication>("mavenJava") {
+        pom {
+            description = "Generate random town names from OpenTTD NewGRF files"
         }
     }
-    repositories {
-        maven {
-            name = "MavenCentral"
-            url = uri(
-                if (version.toString().endsWith("SNAPSHOT"))
-                    "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                else
-                    "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            )
-            credentials {
-                username = providers.gradleProperty("ossrhUsername").orNull
-                password = providers.gradleProperty("ossrhPassword").orNull
-            }
-        }
-    }
-}
-
-signing {
-    val signingKey = System.getenv("SIGNING_SECRET_KEY")
-    if (signingKey != null) {
-        useInMemoryPgpKeys(
-            System.getenv("SIGNING_KEY_ID"),
-            signingKey,
-            System.getenv("SIGNING_PASSWORD")
-        )
-    }
-    sign(publishing.publications["mavenJava"])
 }
 
 // Configuration for bundled GRFs to download at build time.
@@ -95,6 +25,7 @@ val bundledGrfs: List<Pair<String, String>> = listOf(
 val grfOutputDir = layout.buildDirectory.dir("bundled-grfs")
 
 val downloadBundledGrfs by tasks.registering {
+    inputs.property("bundledGrfs", bundledGrfs.map { "${it.first}=${it.second}" })
     outputs.dir(grfOutputDir)
     doLast {
         val dir = grfOutputDir.get().asFile
