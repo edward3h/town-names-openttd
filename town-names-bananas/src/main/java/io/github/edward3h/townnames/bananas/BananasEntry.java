@@ -14,9 +14,4 @@ package io.github.edward3h.townnames.bananas;
  * @param author original author name
  */
 public record BananasEntry(
-    ContentId contentId,
-    String version,
-    String name,
-    String description,
-    String licence,
-    String author) {}
+        ContentId contentId, String version, String name, String description, String licence, String author) {}

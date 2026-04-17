@@ -11,7 +11,7 @@ subprojects {
 
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         java {
-            googleJavaFormat("1.25.2")
+            palantirJavaFormat("2.90.0")
         }
     }
 }

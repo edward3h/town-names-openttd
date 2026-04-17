@@ -18,85 +18,85 @@ import java.util.Optional;
  */
 public final class BananasClient implements AutoCloseable {
 
-  private static final Path DEFAULT_CACHE_DIR =
-      Path.of(System.getProperty("user.home"), ".cache", "town-names-openttd");
+    private static final Path DEFAULT_CACHE_DIR =
+            Path.of(System.getProperty("user.home"), ".cache", "town-names-openttd");
 
-  private final GrfCache cache;
-  private final BananasHttpClient http;
-  private final Path cacheDirectory;
+    private final GrfCache cache;
+    private final BananasHttpClient http;
+    private final Path cacheDirectory;
 
-  private BananasClient(Path cacheDirectory, String baseUrl) {
-    this.cacheDirectory = cacheDirectory;
-    this.cache = new GrfCache(cacheDirectory);
-    this.http = new BananasHttpClient(baseUrl);
-  }
-
-  /** Returns a new builder. */
-  public static Builder builder() {
-    return new Builder();
-  }
-
-  /** The resolved cache directory path. */
-  public Path cacheDirectory() {
-    return cacheDirectory;
-  }
-
-  /**
-   * Search for NewGRF town-name packages matching the query. An empty query returns all available
-   * town-name GRFs.
-   *
-   * @throws IOException on network or parse error
-   * @throws InterruptedException if the thread is interrupted while waiting
-   */
-  public List<BananasEntry> search(String query) throws IOException, InterruptedException {
-    return http.search(query);
-  }
-
-  /**
-   * Download a GRF file. Returns immediately from the local cache if already present; otherwise
-   * fetches from the Bananas server and caches the result.
-   *
-   * @throws IOException on network or I/O error
-   * @throws InterruptedException if interrupted while downloading
-   */
-  public GrfDownloadResult download(BananasEntry entry) throws IOException, InterruptedException {
-    Optional<Path> cached = cache.lookup(entry);
-    if (cached.isPresent()) {
-      return new GrfDownloadResult(cached.get());
-    }
-    byte[] tar = http.download(entry);
-    byte[] bytes = TarExtractor.extractGrf(tar);
-    Path stored = cache.store(entry, bytes);
-    return new GrfDownloadResult(stored);
-  }
-
-  @Override
-  public void close() {
-    http.close();
-  }
-
-  /** Builder for {@link BananasClient}. */
-  public static final class Builder {
-
-    private Path cacheDir = DEFAULT_CACHE_DIR;
-    private String baseUrl = "https://bananas-api.openttd.org";
-
-    private Builder() {}
-
-    /** Set a custom cache directory (pass an absolute path). */
-    public Builder cacheDir(Path cacheDir) {
-      this.cacheDir = Objects.requireNonNull(cacheDir, "cacheDir must not be null");
-      return this;
+    private BananasClient(Path cacheDirectory, String baseUrl) {
+        this.cacheDirectory = cacheDirectory;
+        this.cache = new GrfCache(cacheDirectory);
+        this.http = new BananasHttpClient(baseUrl);
     }
 
-    /** Override the Bananas API base URL (used in tests). */
-    public Builder baseUrl(String baseUrl) {
-      this.baseUrl = Objects.requireNonNull(baseUrl, "baseUrl must not be null");
-      return this;
+    /** Returns a new builder. */
+    public static Builder builder() {
+        return new Builder();
     }
 
-    public BananasClient build() {
-      return new BananasClient(cacheDir, baseUrl);
+    /** The resolved cache directory path. */
+    public Path cacheDirectory() {
+        return cacheDirectory;
     }
-  }
+
+    /**
+     * Search for NewGRF town-name packages matching the query. An empty query returns all available
+     * town-name GRFs.
+     *
+     * @throws IOException on network or parse error
+     * @throws InterruptedException if the thread is interrupted while waiting
+     */
+    public List<BananasEntry> search(String query) throws IOException, InterruptedException {
+        return http.search(query);
+    }
+
+    /**
+     * Download a GRF file. Returns immediately from the local cache if already present; otherwise
+     * fetches from the Bananas server and caches the result.
+     *
+     * @throws IOException on network or I/O error
+     * @throws InterruptedException if interrupted while downloading
+     */
+    public GrfDownloadResult download(BananasEntry entry) throws IOException, InterruptedException {
+        Optional<Path> cached = cache.lookup(entry);
+        if (cached.isPresent()) {
+            return new GrfDownloadResult(cached.get());
+        }
+        byte[] tar = http.download(entry);
+        byte[] bytes = TarExtractor.extractGrf(tar);
+        Path stored = cache.store(entry, bytes);
+        return new GrfDownloadResult(stored);
+    }
+
+    @Override
+    public void close() {
+        http.close();
+    }
+
+    /** Builder for {@link BananasClient}. */
+    public static final class Builder {
+
+        private Path cacheDir = DEFAULT_CACHE_DIR;
+        private String baseUrl = "https://bananas-api.openttd.org";
+
+        private Builder() {}
+
+        /** Set a custom cache directory (pass an absolute path). */
+        public Builder cacheDir(Path cacheDir) {
+            this.cacheDir = Objects.requireNonNull(cacheDir, "cacheDir must not be null");
+            return this;
+        }
+
+        /** Override the Bananas API base URL (used in tests). */
+        public Builder baseUrl(String baseUrl) {
+            this.baseUrl = Objects.requireNonNull(baseUrl, "baseUrl must not be null");
+            return this;
+        }
+
+        public BananasClient build() {
+            return new BananasClient(cacheDir, baseUrl);
+        }
+    }
 }

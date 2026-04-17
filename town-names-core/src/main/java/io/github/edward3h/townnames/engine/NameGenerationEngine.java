@@ -10,22 +10,22 @@ import java.util.Random;
  */
 public final class NameGenerationEngine {
 
-  private final List<NameSource> sources;
+    private final List<NameSource> sources;
 
-  public NameGenerationEngine(List<NameSource> sources) {
-    if (sources.isEmpty()) throw new IllegalArgumentException("At least one source is required");
-    this.sources = List.copyOf(sources);
-  }
+    public NameGenerationEngine(List<NameSource> sources) {
+        if (sources.isEmpty()) throw new IllegalArgumentException("At least one source is required");
+        this.sources = List.copyOf(sources);
+    }
 
-  /** Generate a single name using the provided RNG. */
-  public String generate(Random rng) {
-    return sources.get(rng.nextInt(sources.size())).generate(rng);
-  }
+    /** Generate a single name using the provided RNG. */
+    public String generate(Random rng) {
+        return sources.get(rng.nextInt(sources.size())).generate(rng);
+    }
 
-  /** Generate {@code count} names. */
-  public List<String> generate(Random rng, int count) {
-    var names = new ArrayList<String>(count);
-    for (int i = 0; i < count; i++) names.add(generate(rng));
-    return List.copyOf(names);
-  }
+    /** Generate {@code count} names. */
+    public List<String> generate(Random rng, int count) {
+        var names = new ArrayList<String>(count);
+        for (int i = 0; i < count; i++) names.add(generate(rng));
+        return List.copyOf(names);
+    }
 }
