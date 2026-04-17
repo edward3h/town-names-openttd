@@ -1,7 +1,8 @@
 package io.github.edward3h.townnames;
 
+import io.github.edward3h.townnames.engine.GrfNameSource;
 import io.github.edward3h.townnames.engine.NameGenerationEngine;
-import io.github.edward3h.townnames.grf.GrfData;
+import io.github.edward3h.townnames.engine.NameSource;
 import io.github.edward3h.townnames.grf.GrfParser;
 import io.github.edward3h.townnames.registry.BundledGrfRegistry;
 import java.io.IOException;
@@ -101,13 +102,13 @@ public final class TownNameGenerator {
         throw new IllegalArgumentException("At least one GRF source must be specified");
       }
 
-      var allData = new ArrayList<GrfData>();
+      var allSources = new ArrayList<NameSource>();
       var skipped = new ArrayList<Path>();
 
       // Load bundled GRFs
       for (String name : bundledNames) {
         try (var stream = registry.open(name)) {
-          allData.addAll(GrfParser.parse(stream));
+          GrfParser.parse(stream).stream().map(GrfNameSource::new).forEach(allSources::add);
         } catch (IOException e) {
           // Bundled GRFs should never fail — treat as fatal
           throw new IllegalStateException("Failed to load bundled GRF '" + name + "'", e);
@@ -117,23 +118,23 @@ public final class TownNameGenerator {
       // Load file GRFs; skip unreadable ones
       for (Path path : filePaths) {
         try {
-          List<GrfData> data = GrfParser.parse(path);
-          if (data.isEmpty()) {
+          var sources = GrfParser.parse(path).stream().map(GrfNameSource::new).toList();
+          if (sources.isEmpty()) {
             skipped.add(path); // readable but no Action 0F data
           } else {
-            allData.addAll(data);
+            allSources.addAll(sources);
           }
         } catch (IOException e) {
           skipped.add(path);
         }
       }
 
-      if (allData.isEmpty()) {
+      if (allSources.isEmpty()) {
         throw new IllegalArgumentException(
             "No valid GRF data found. All file sources were invalid: " + filePaths);
       }
 
-      var engine = new NameGenerationEngine(allData);
+      var engine = new NameGenerationEngine(allSources);
       return new BuildResult(new TownNameGenerator(engine, seed), List.copyOf(skipped));
     }
   }
