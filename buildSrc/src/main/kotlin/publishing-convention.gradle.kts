@@ -24,6 +24,7 @@ publishing {
                 developers {
                     developer {
                         id = "edward3h"
+                        name = "Edward Harman"
                         email = "jaq@ethelred.org"
                     }
                 }
