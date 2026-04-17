@@ -18,7 +18,7 @@ java {
 dependencies {
     api(project(":town-names-core"))
     implementation("com.fasterxml.jackson.core:jackson-databind:2.21.2")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.12.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.14.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
