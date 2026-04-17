@@ -5,6 +5,7 @@ import io.github.edward3h.townnames.bananas.http.BananasHttpClient;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -83,13 +84,13 @@ public final class BananasClient implements AutoCloseable {
 
     /** Set a custom cache directory (pass an absolute path). */
     public Builder cacheDir(Path cacheDir) {
-      this.cacheDir = cacheDir;
+      this.cacheDir = Objects.requireNonNull(cacheDir, "cacheDir must not be null");
       return this;
     }
 
     /** Override the Bananas API base URL (used in tests). */
     public Builder baseUrl(String baseUrl) {
-      this.baseUrl = baseUrl;
+      this.baseUrl = Objects.requireNonNull(baseUrl, "baseUrl must not be null");
       return this;
     }
 

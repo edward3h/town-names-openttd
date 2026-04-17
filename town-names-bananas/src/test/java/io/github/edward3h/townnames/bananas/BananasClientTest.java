@@ -25,6 +25,7 @@ class BananasClientTest {
 
   private HttpServer mockServer;
   private int port;
+  private BananasClient client;
 
   @BeforeEach
   void setUp() throws IOException {
@@ -49,14 +50,16 @@ class BananasClientTest {
   }
 
   @AfterEach
-  void tearDown() {
+  void tearDown() throws Exception {
+    if (client != null) {
+      client.close();
+    }
     mockServer.stop(0);
   }
 
   @Test
   void searchDelegatesToApi(@TempDir Path cacheDir) throws Exception {
-    var client =
-        BananasClient.builder().cacheDir(cacheDir).baseUrl("http://localhost:" + port).build();
+    client = BananasClient.builder().cacheDir(cacheDir).baseUrl("http://localhost:" + port).build();
     List<BananasEntry> results = client.search("uk");
     assertEquals(1, results.size());
     assertEquals("UK Town Names", results.get(0).name());
@@ -64,8 +67,7 @@ class BananasClientTest {
 
   @Test
   void downloadCachesOnFirstCall(@TempDir Path cacheDir) throws Exception {
-    var client =
-        BananasClient.builder().cacheDir(cacheDir).baseUrl("http://localhost:" + port).build();
+    client = BananasClient.builder().cacheDir(cacheDir).baseUrl("http://localhost:" + port).build();
     BananasEntry entry = client.search("").get(0);
     GrfDownloadResult result = client.download(entry);
     assertTrue(Files.exists(result.localPath()));
@@ -74,8 +76,7 @@ class BananasClientTest {
 
   @Test
   void downloadReturnsFromCacheOnSecondCall(@TempDir Path cacheDir) throws Exception {
-    var client =
-        BananasClient.builder().cacheDir(cacheDir).baseUrl("http://localhost:" + port).build();
+    client = BananasClient.builder().cacheDir(cacheDir).baseUrl("http://localhost:" + port).build();
     BananasEntry entry = client.search("").get(0);
     GrfDownloadResult first = client.download(entry);
     // Stop mock server — second download must not make a network call
@@ -85,8 +86,10 @@ class BananasClientTest {
   }
 
   @Test
-  void defaultCacheDirIsTildeCache() {
-    var client = BananasClient.builder().build();
+  void defaultCacheDirIsTildeCache() throws Exception {
+    // This test creates ~/.cache/town-names-openttd as a side effect (GrfCache calls
+    // Files.createDirectories eagerly), which is safe and idempotent on all CI runners.
+    client = BananasClient.builder().build();
     Path expected = Path.of(System.getProperty("user.home"), ".cache", "town-names-openttd");
     assertEquals(expected, client.cacheDirectory());
   }
