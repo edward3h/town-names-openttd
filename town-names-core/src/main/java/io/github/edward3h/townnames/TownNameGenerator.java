@@ -1,5 +1,6 @@
 package io.github.edward3h.townnames;
 
+import io.github.edward3h.townnames.builtin.BuiltinSet;
 import io.github.edward3h.townnames.engine.GrfNameSource;
 import io.github.edward3h.townnames.engine.NameGenerationEngine;
 import io.github.edward3h.townnames.engine.NameSource;
@@ -8,12 +9,15 @@ import io.github.edward3h.townnames.registry.BundledGrfRegistry;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
 /**
- * Generates random town names by combining one or more NewGRF sources.
+ * Generates random town names from one or more sources (built-in generators, bundled GRFs, or
+ * custom GRF files).
  *
  * <p>Use {@link #builder()} to configure sources and an optional seed, then call {@link
  * Builder#build()} to get a {@link BuildResult} containing the generator and any sources that could
@@ -36,6 +40,11 @@ public final class TownNameGenerator {
     return new Builder();
   }
 
+  /** Returns the names of all built-in generator sets. */
+  public static List<String> builtinNames() {
+    return Arrays.stream(BuiltinSet.values()).map(Enum::name).toList();
+  }
+
   /** Generate a single random town name. */
   public String generate() {
     return engine.generate(rng);
@@ -55,11 +64,18 @@ public final class TownNameGenerator {
   /** Builder for {@link TownNameGenerator}. */
   public static final class Builder {
 
+    private final List<BuiltinSet> builtinSets = new ArrayList<>();
     private final List<String> bundledNames = new ArrayList<>();
     private final List<Path> filePaths = new ArrayList<>();
     private Optional<Long> seed = Optional.empty();
 
     private Builder() {}
+
+    /** Add a built-in generator set (e.g. {@code BuiltinSet.ENGLISH_ORIGINAL}). */
+    public Builder withBuiltin(BuiltinSet set) {
+      builtinSets.add(Objects.requireNonNull(set, "set must not be null"));
+      return this;
+    }
 
     /** Add a bundled GRF by name (e.g. {@code "uk-towns"}). */
     public Builder withBundled(String name) {
@@ -81,12 +97,7 @@ public final class TownNameGenerator {
       return this;
     }
 
-    /**
-     * Build the generator.
-     *
-     * @throws IllegalArgumentException if no bundled name is unknown, or if all file sources are
-     *     invalid and no bundled sources were specified
-     */
+    /** Build the generator. */
     public BuildResult build() {
       var registry = BundledGrfRegistry.getInstance();
 
@@ -98,19 +109,21 @@ public final class TownNameGenerator {
         }
       }
 
-      if (bundledNames.isEmpty() && filePaths.isEmpty()) {
-        throw new IllegalArgumentException("At least one GRF source must be specified");
+      if (builtinSets.isEmpty() && bundledNames.isEmpty() && filePaths.isEmpty()) {
+        throw new IllegalArgumentException("At least one source must be specified");
       }
 
       var allSources = new ArrayList<NameSource>();
       var skipped = new ArrayList<Path>();
+
+      // Add built-in generators
+      allSources.addAll(builtinSets);
 
       // Load bundled GRFs
       for (String name : bundledNames) {
         try (var stream = registry.open(name)) {
           GrfParser.parse(stream).stream().map(GrfNameSource::new).forEach(allSources::add);
         } catch (IOException e) {
-          // Bundled GRFs should never fail — treat as fatal
           throw new IllegalStateException("Failed to load bundled GRF '" + name + "'", e);
         }
       }
@@ -120,7 +133,7 @@ public final class TownNameGenerator {
         try {
           var sources = GrfParser.parse(path).stream().map(GrfNameSource::new).toList();
           if (sources.isEmpty()) {
-            skipped.add(path); // readable but no Action 0F data
+            skipped.add(path);
           } else {
             allSources.addAll(sources);
           }
