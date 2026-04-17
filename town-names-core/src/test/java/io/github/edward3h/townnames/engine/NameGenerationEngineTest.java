@@ -77,7 +77,8 @@ class NameGenerationEngineTest {
         var engine = new NameGenerationEngine(List.of(sourceA, sourceB));
 
         // Over many iterations each result must be entirely from one source — never cross-mixed.
-        // Use a single seeded Random so the stream of calls exercises both source indices.
+        // Use a single shared RNG rather than new Random(i) per iteration: seeds 0..99 all return
+        // 1 from nextInt(2) in Java's LCG, so they would never exercise source index 0.
         java.util.Set<String> generated = new java.util.HashSet<>();
         var rng = new Random(12345L);
         for (int i = 0; i < 100; i++) {
