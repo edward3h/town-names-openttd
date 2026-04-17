@@ -6,6 +6,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,10 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * File-system cache for downloaded GRF files.
  *
- * <p>Files are keyed by {@code {grfid}_{md5sum}_{version}.grf}.
- * On construction, the cache directory is scanned and any existing files are indexed.
- * {@link #store} writes atomically (write to temp, then move).
- * The cache is grow-only: existing entries are never removed or overwritten.
+ * <p>Files are keyed by {@code {grfid}_{md5sum}_{version}.grf}. On construction, the cache
+ * directory is scanned and any existing files are indexed. {@link #store} writes atomically (write
+ * to temp, then move). An existing cache file is replaced if a new download for the same entry is
+ * stored (e.g. to recover from a corrupt partial write).
  */
 public final class GrfCache {
 
@@ -63,7 +64,7 @@ public final class GrfCache {
   public Path store(BananasEntry entry, byte[] content) throws IOException {
     String key = cacheKey(entry);
     Path target = cacheDirectory.resolve(key);
-    Path temp = cacheDirectory.resolve(key + ".tmp");
+    Path temp = Files.createTempFile(cacheDirectory, key + "-", ".tmp");
     Files.write(temp, content);
     Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
     index.put(key, target);
@@ -72,13 +73,15 @@ public final class GrfCache {
 
   private static String cacheKey(BananasEntry entry) {
     return entry.contentId().grfid()
-        + "_" + entry.contentId().md5sum()
-        + "_" + entry.version()
+        + "_"
+        + entry.contentId().md5sum()
+        + "_"
+        + entry.version()
         + ".grf";
   }
 
   private static Map<String, Path> scan(Path dir) {
-    var result = new ConcurrentHashMap<String, Path>();
+    var result = new HashMap<String, Path>();
     try (var stream = Files.list(dir)) {
       stream
           .filter(p -> p.getFileName().toString().endsWith(".grf"))
