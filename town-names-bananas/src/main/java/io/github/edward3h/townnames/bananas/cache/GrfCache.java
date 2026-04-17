@@ -23,6 +23,15 @@ public final class GrfCache {
   private final Path cacheDirectory;
   private final Map<String, Path> index;
 
+  /**
+   * Create a cache instance backed by the given directory.
+   *
+   * <p>The directory is created if it does not exist, and is scanned for existing .grf files to
+   * populate the index.
+   *
+   * @param cacheDirectory the directory to use for caching
+   * @throws UncheckedIOException if the directory cannot be created or scanned
+   */
   public GrfCache(Path cacheDirectory) {
     try {
       Files.createDirectories(cacheDirectory);
@@ -33,7 +42,12 @@ public final class GrfCache {
     this.index = new ConcurrentHashMap<>(scan(cacheDirectory));
   }
 
-  /** Returns the cached path for this entry, if present. */
+  /**
+   * Returns the cached path for this entry, if present.
+   *
+   * @param entry the Bananas entry to look up
+   * @return the cached file path, or empty if not cached
+   */
   public Optional<Path> lookup(BananasEntry entry) {
     return Optional.ofNullable(index.get(cacheKey(entry)));
   }
@@ -41,7 +55,10 @@ public final class GrfCache {
   /**
    * Store bytes for an entry in the cache, atomically.
    *
+   * @param entry the Bananas entry to cache
+   * @param content the file bytes to store
    * @return the path where the file was stored
+   * @throws IOException if the write or move operation fails
    */
   public Path store(BananasEntry entry, byte[] content) throws IOException {
     String key = cacheKey(entry);
