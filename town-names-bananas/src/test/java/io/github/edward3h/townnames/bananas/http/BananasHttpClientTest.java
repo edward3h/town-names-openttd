@@ -62,7 +62,8 @@ class BananasHttpClientTest {
   }
 
   @AfterEach
-  void tearDown() {
+  void tearDown() throws Exception {
+    client.close();
     mockServer.stop(0);
   }
 
@@ -79,5 +80,32 @@ class BananasHttpClientTest {
     BananasEntry entry = client.search("uk").get(0);
     byte[] bytes = client.download(entry);
     assertArrayEquals(FAKE_GRF, bytes);
+  }
+
+  @Test
+  void searchThrowsOnNon200() throws IOException {
+    mockServer.createContext(
+        "/err/package/newgrf",
+        exchange -> {
+          exchange.sendResponseHeaders(500, 0);
+          exchange.close();
+        });
+    try (var errorClient = new BananasHttpClient("http://localhost:" + port + "/err")) {
+      assertThrows(IOException.class, () -> errorClient.search("x"));
+    }
+  }
+
+  @Test
+  void downloadThrowsOnNon200() throws IOException, InterruptedException {
+    mockServer.createContext(
+        "/err/download/ABCD1234",
+        exchange -> {
+          exchange.sendResponseHeaders(404, 0);
+          exchange.close();
+        });
+    try (var errorClient = new BananasHttpClient("http://localhost:" + port + "/err")) {
+      BananasEntry entry = client.search("uk").get(0);
+      assertThrows(IOException.class, () -> errorClient.download(entry));
+    }
   }
 }

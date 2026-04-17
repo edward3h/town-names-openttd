@@ -17,9 +17,11 @@ import java.util.List;
 /**
  * HTTP client for the OpenTTD Bananas REST API.
  *
- * <p>Network errors propagate as {@link IOException} or {@link InterruptedException}.
+ * <p>Network errors propagate as {@link IOException} or {@link InterruptedException}. Implements
+ * {@link AutoCloseable}; callers should close this instance when done to release the underlying
+ * connection pool.
  */
-public final class BananasHttpClient {
+public final class BananasHttpClient implements AutoCloseable {
 
   private static final String DEFAULT_BASE_URL = "https://bananas-api.openttd.org";
 
@@ -77,6 +79,11 @@ public final class BananasHttpClient {
       throw new IOException("Bananas download failed with status " + response.statusCode());
     }
     return response.body();
+  }
+
+  @Override
+  public void close() {
+    http.close();
   }
 
   private static BananasEntry parseEntry(JsonNode node) {
