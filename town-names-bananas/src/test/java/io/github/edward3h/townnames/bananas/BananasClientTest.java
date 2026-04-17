@@ -116,8 +116,7 @@ class BananasClientTest {
     Arrays.fill(tar, 148, 156, (byte) ' ');
     int checksum = 0;
     for (int i = 0; i < 512; i++) checksum += (tar[i] & 0xFF);
-    byte[] checksumField =
-        String.format("%06o\0 ", checksum).getBytes(StandardCharsets.US_ASCII);
+    byte[] checksumField = String.format("%06o\0 ", checksum).getBytes(StandardCharsets.US_ASCII);
     System.arraycopy(checksumField, 0, tar, 148, checksumField.length);
 
     System.arraycopy(content, 0, tar, 512, content.length);

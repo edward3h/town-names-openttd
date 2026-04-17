@@ -37,8 +37,8 @@ publishing {
                 url = "https://github.com/edward3h/town-names-openttd"
                 licenses {
                     license {
-                        name = "MIT License"
-                        url = "https://opensource.org/licenses/MIT"
+                        name = "GNU General Public License v2.0"
+                        url = "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html"
                     }
                 }
                 developers {
