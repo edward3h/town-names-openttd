@@ -1,0 +1,16 @@
+town-names-openttd — Third-Party Notices
+=========================================
+
+This library bundles NewGRF files sourced from the OpenTTD Bananas
+content server (https://bananas.openttd.org). Each file is used and
+redistributed in accordance with its stated licence.
+
+No NewGRF files are bundled in this version.
+Once curation is complete, each entry will be listed here:
+
+  Name:       (display name)
+  Content ID: (grfid)/(md5sum)
+  Version:    (version string)
+  Author:     (author name)
+  Licence:    (licence name)
+  Source:     https://bananas.openttd.org/package/newgrf/(grfid)
