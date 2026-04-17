@@ -5,12 +5,22 @@ This library bundles NewGRF files sourced from the OpenTTD Bananas
 content server (https://bananas.openttd.org). Each file is used and
 redistributed in accordance with its stated licence.
 
-No NewGRF files are bundled in this version.
-Once curation is complete, each entry will be listed here:
+------------------------------------------------------------------------------
 
-  Name:       (display name)
-  Content ID: (grfid)/(md5sum)
-  Version:    (version string)
-  Author:     (author name)
-  Licence:    (licence name)
-  Source:     https://bananas.openttd.org/package/newgrf/(grfid)
+  Name:       Dystopian Town Names
+  File:       dystopian-town-names.grf
+  Content ID: 44595354
+  Version:    1.0
+  Licence:    Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+  Source:     https://bananas.openttd.org/package/newgrf/44595354
+
+------------------------------------------------------------------------------
+
+  Name:       Massachusetts Town Names
+  File:       massachusetts-town-names.grf
+  Content ID: 54540601
+  Version:    1.0.0
+  Licence:    GNU General Public License v3.0 (GPL-3.0)
+  Source:     https://bananas.openttd.org/package/newgrf/54540601
+
+------------------------------------------------------------------------------

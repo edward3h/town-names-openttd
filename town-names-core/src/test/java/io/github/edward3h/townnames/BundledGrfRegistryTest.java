@@ -8,14 +8,23 @@ import org.junit.jupiter.api.Test;
 class BundledGrfRegistryTest {
 
   @Test
-  void registryReportsAvailableNames() {
-    var registry = BundledGrfRegistry.getInstance();
-    // When no GRFs are bundled yet (empty bundledGrfs list), the list is empty but non-null
-    assertNotNull(registry.availableNames());
+  void registryListsBundledGrfs() {
+    var names = BundledGrfRegistry.getInstance().availableNames();
+    assertTrue(names.contains("dystopian-town-names"), "Expected dystopian-town-names: " + names);
+    assertTrue(
+        names.contains("massachusetts-town-names"), "Expected massachusetts-town-names: " + names);
   }
 
   @Test
   void registryIsASingleton() {
     assertSame(BundledGrfRegistry.getInstance(), BundledGrfRegistry.getInstance());
+  }
+
+  @Test
+  void openReturnsStreamForBundledGrf() throws Exception {
+    try (var stream = BundledGrfRegistry.getInstance().open("dystopian-town-names")) {
+      assertNotNull(stream);
+      assertTrue(stream.available() > 0);
+    }
   }
 }
