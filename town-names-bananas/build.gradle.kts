@@ -4,7 +4,7 @@ plugins {
     signing
 }
 
-group = "io.github.edward3h"
+group = "red.ethel"
 version = "0.1.0-SNAPSHOT"
 
 java {
