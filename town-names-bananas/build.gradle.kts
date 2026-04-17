@@ -1,85 +1,19 @@
+import org.gradle.api.publish.maven.MavenPublication
+
 plugins {
-    `java-library`
-    `maven-publish`
-    signing
-}
-
-group = "red.ethel"
-version = "0.1.0-SNAPSHOT"
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
-    withJavadocJar()
-    withSourcesJar()
+    id("java-convention")
+    id("publishing-convention")
 }
 
 dependencies {
     api(project(":town-names-core"))
     implementation("com.fasterxml.jackson.core:jackson-databind:2.21.2")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.14.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            artifactId = "town-names-bananas"
-            from(components["java"])
-            pom {
-                name = "town-names-bananas"
-                description = "Download OpenTTD NewGRF town name files from the Bananas content server"
-                url = "https://github.com/edward3h/town-names-openttd"
-                licenses {
-                    license {
-                        name = "GNU General Public License v2.0 or later"
-                        url = "https://www.gnu.org/licenses/gpl-2.0.html"
-                    }
-                }
-                developers {
-                    developer {
-                        id = "edward3h"
-                        email = "jaq@ethelred.org"
-                    }
-                }
-                scm {
-                    connection = "scm:git:git://github.com/edward3h/town-names-openttd.git"
-                    developerConnection = "scm:git:ssh://github.com/edward3h/town-names-openttd.git"
-                    url = "https://github.com/edward3h/town-names-openttd"
-                }
-            }
+    publications.named<MavenPublication>("mavenJava") {
+        pom {
+            description = "Download OpenTTD NewGRF town name files from the Bananas content server"
         }
     }
-    repositories {
-        maven {
-            name = "MavenCentral"
-            url = uri(
-                if (version.toString().endsWith("SNAPSHOT"))
-                    "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                else
-                    "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            )
-            credentials {
-                username = providers.gradleProperty("ossrhUsername").orNull
-                password = providers.gradleProperty("ossrhPassword").orNull
-            }
-        }
-    }
-}
-
-signing {
-    val signingKey = System.getenv("SIGNING_SECRET_KEY")
-    if (signingKey != null) {
-        useInMemoryPgpKeys(
-            System.getenv("SIGNING_KEY_ID"),
-            signingKey,
-            System.getenv("SIGNING_PASSWORD")
-        )
-    }
-    sign(publishing.publications["mavenJava"])
 }

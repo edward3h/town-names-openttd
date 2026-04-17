@@ -61,9 +61,9 @@ signing {
             signingKey,
             System.getenv("SIGNING_PASSWORD")
         )
+        // sign(publishing.publications) signs all publications lazily — safe in convention plugins.
+        // The original subproject files used sign(publishing.publications["mavenJava"]) which
+        // resolves the publication eagerly and is not safe when signing is in a convention plugin.
+        sign(publishing.publications)
     }
-    // sign(publishing.publications) signs all publications lazily — safe in convention plugins.
-    // The original subproject files used sign(publishing.publications["mavenJava"]) which
-    // resolves the publication eagerly and is not safe when signing is in a convention plugin.
-    sign(publishing.publications)
 }
