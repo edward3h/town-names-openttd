@@ -8,15 +8,16 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Generates town names by randomly selecting one GRF source and applying weighted random
- * selection across its parts. PartRef indices are local to the selected source.
+ * Generates town names by randomly selecting one GRF source and applying weighted random selection
+ * across its parts. PartRef indices are local to the selected source.
  */
 public final class NameGenerationEngine {
 
   private final List<GrfData> sources;
 
   public NameGenerationEngine(List<GrfData> sources) {
-    if (sources.isEmpty()) throw new IllegalArgumentException("At least one GRF source is required");
+    if (sources.isEmpty())
+      throw new IllegalArgumentException("At least one GRF source is required");
     this.sources = List.copyOf(sources);
   }
 

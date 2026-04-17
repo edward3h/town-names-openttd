@@ -12,8 +12,8 @@ import java.util.List;
 /**
  * Provides the set of NewGRF files bundled inside this JAR.
  *
- * <p>Populated at runtime by scanning the {@code /grf/} directory on the classpath.
- * The stem of each {@code .grf} filename (without extension) is the name exposed to callers.
+ * <p>Populated at runtime by scanning the {@code /grf/} directory on the classpath. The stem of
+ * each {@code .grf} filename (without extension) is the name exposed to callers.
  */
 public final class BundledGrfRegistry {
 
@@ -50,8 +50,7 @@ public final class BundledGrfRegistry {
   private static List<String> discoverNames() {
     var result = new ArrayList<String>();
     try {
-      Enumeration<URL> resources =
-          BundledGrfRegistry.class.getClassLoader().getResources("grf");
+      Enumeration<URL> resources = BundledGrfRegistry.class.getClassLoader().getResources("grf");
       while (resources.hasMoreElements()) {
         URL url = resources.nextElement();
         // For jar: URLs, list entries; for file: URLs, list directory
@@ -89,9 +88,7 @@ public final class BundledGrfRegistry {
     if (!dir.isDirectory()) return List.of();
     var files = dir.listFiles((d, name) -> name.endsWith(".grf"));
     if (files == null) return List.of();
-    return java.util.Arrays.stream(files)
-        .map(f -> stem(f.getName()))
-        .toList();
+    return java.util.Arrays.stream(files).map(f -> stem(f.getName())).toList();
   }
 
   private static String stem(String filename) {

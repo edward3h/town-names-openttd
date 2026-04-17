@@ -107,3 +107,35 @@ val downloadBundledGrfs by tasks.registering {
 
 sourceSets["main"].resources.srcDir(grfOutputDir)
 tasks.named("processResources") { dependsOn(downloadBundledGrfs) }
+
+val generateTestGrf by tasks.registering {
+    val outFile = layout.buildDirectory.file("test-resources/test-names.grf")
+    outputs.file(outFile)
+    doLast {
+        val file = outFile.get().asFile
+        file.parentFile.mkdirs()
+        // Minimal Action 0F NewGRF: 1 part, 2 entries — "North" (50) | "South" (50)
+        // Container v1: spriteLen = bodyLen + 1 (includes info byte)
+        val text1 = "North".toByteArray(Charsets.UTF_8)
+        val text2 = "South".toByteArray(Charsets.UTF_8)
+        val bodyLen = 1 + 1 + 1 + 1 + 1 + text1.size + 1 + 1 + text2.size + 1
+        val spriteLen = bodyLen + 1
+        val bytes = mutableListOf<Byte>()
+        bytes += (spriteLen and 0xFF).toByte()
+        bytes += ((spriteLen shr 8) and 0xFF).toByte()
+        bytes += 0xFF.toByte() // info: pseudo-sprite
+        bytes += 0x0F.toByte() // action
+        bytes += 0x00.toByte() // id
+        bytes += 0x01.toByte() // num-parts
+        bytes += 0x02.toByte() // count
+        bytes += 50.toByte() // prob entry 1
+        text1.forEach { bytes += it }
+        bytes += 0x00.toByte() // NUL
+        bytes += 50.toByte() // prob entry 2
+        text2.forEach { bytes += it }
+        bytes += 0x00.toByte() // NUL
+        file.writeBytes(bytes.toByteArray())
+    }
+}
+sourceSets["test"].resources.srcDir(layout.buildDirectory.dir("test-resources"))
+tasks.named("processTestResources") { dependsOn(generateTestGrf) }

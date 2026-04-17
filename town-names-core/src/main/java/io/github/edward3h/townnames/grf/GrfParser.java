@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Parses NewGRF container v1 binary data and extracts all Action 0F
- * (town name generator) pseudo-sprites.
+ * Parses NewGRF container v1 binary data and extracts all Action 0F (town name generator)
+ * pseudo-sprites.
  *
  * <p>Reference: https://newgrf-specs.tt-wiki.net/wiki/Action0F
  */
