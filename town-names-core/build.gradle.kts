@@ -73,6 +73,14 @@ publishing {
 }
 
 signing {
+    val signingKey = System.getenv("SIGNING_SECRET_KEY")
+    if (signingKey != null) {
+        useInMemoryPgpKeys(
+            System.getenv("SIGNING_KEY_ID"),
+            signingKey,
+            System.getenv("SIGNING_PASSWORD")
+        )
+    }
     sign(publishing.publications["mavenJava"])
 }
 
