@@ -6,7 +6,7 @@
 
 **Architecture:** Multi-module Gradle (Kotlin DSL) project. `town-names-core` has zero runtime dependencies and exposes `TownNameGenerator` backed by a binary NewGRF parser and weighted-random engine. `town-names-bananas` depends on core and wraps the Bananas REST API with an atomic file-system cache keyed on `ContentId + version`.
 
-**Tech Stack:** Java 25, Gradle 8.12+ (Kotlin DSL), JUnit 5, Jackson Databind (bananas only), Spotless + Google Java Format, GitHub Actions CI, Maven Central via `maven-publish` + `signing`.
+**Tech Stack:** Java 25, Gradle 9.4.1 (Kotlin DSL), JUnit 5, Jackson Databind (bananas only), Spotless + Google Java Format, GitHub Actions CI, Maven Central via `maven-publish` + `signing`.
 
 ---
 
@@ -29,7 +29,7 @@ git checkout -b main
 - [ ] **Step 2: Bootstrap Gradle wrapper**
 
 ```bash
-gradle wrapper --gradle-version 8.12
+gradle wrapper --gradle-version 9.4.1
 ```
 
 Expected: `gradlew`, `gradlew.bat`, and `gradle/wrapper/` created.
