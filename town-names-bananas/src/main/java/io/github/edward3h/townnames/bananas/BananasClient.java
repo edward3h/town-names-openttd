@@ -64,7 +64,8 @@ public final class BananasClient implements AutoCloseable {
     if (cached.isPresent()) {
       return new GrfDownloadResult(cached.get());
     }
-    byte[] bytes = http.download(entry);
+    byte[] tar = http.download(entry);
+    byte[] bytes = TarExtractor.extractGrf(tar);
     Path stored = cache.store(entry, bytes);
     return new GrfDownloadResult(stored);
   }
