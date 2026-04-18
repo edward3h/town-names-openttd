@@ -37,9 +37,10 @@ val downloadBundledGrfs by tasks.registering {
     }
 }
 
-sourceSets["main"].resources.srcDir(grfOutputDir)
-tasks.named("processResources") { dependsOn(downloadBundledGrfs) }
-tasks.named("sourcesJar") { dependsOn(downloadBundledGrfs) }
+tasks.named<ProcessResources>("processResources") {
+    from(grfOutputDir)
+    dependsOn(downloadBundledGrfs)
+}
 
 val generateTestGrf by tasks.registering {
     val outFile = layout.buildDirectory.file("test-resources/test-names.grf")
