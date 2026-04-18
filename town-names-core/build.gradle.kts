@@ -1,18 +1,11 @@
 import java.net.URL
-import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     id("java-convention")
     id("publishing-convention")
 }
 
-publishing {
-    publications.named<MavenPublication>("mavenJava") {
-        pom {
-            description = "Generate random town names from OpenTTD NewGRF files"
-        }
-    }
-}
+description = "Generate random town names from OpenTTD NewGRF files"
 
 // Configuration for bundled GRFs to download at build time.
 // Each entry: Pair(filename, downloadUrl)

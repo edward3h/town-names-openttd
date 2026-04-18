@@ -1,69 +1,43 @@
-import org.gradle.api.publish.maven.MavenPublication
-
 plugins {
-    `maven-publish`
-    signing
+    java
+    id("maven-publish")
+    id("signing")
+    id("com.vanniktech.maven.publish")
 }
 
 group = rootProject.group
 version = rootProject.version
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            pom {
-                name = project.name  // defaults to artifactId (project directory name); required by Maven Central
-                url = "https://github.com/edward3h/town-names-openttd"
-                licenses {
-                    license {
-                        name = "GNU General Public License v2.0 or later"
-                        url = "https://www.gnu.org/licenses/gpl-2.0.html"
-                    }
-                }
-                developers {
-                    developer {
-                        id = "edward3h"
-                        name = "Edward Harman"
-                        email = "jaq@ethelred.org"
-                    }
-                }
-                scm {
-                    connection = "scm:git:git://github.com/edward3h/town-names-openttd.git"
-                    developerConnection = "scm:git:ssh://github.com/edward3h/town-names-openttd.git"
-                    url = "https://github.com/edward3h/town-names-openttd"
-                }
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
+    pom {
+        name = project.name
+        description = project.description
+        url = "https://github.com/edward3h/town-names-openttd"
+        licenses {
+            license {
+                name = "GNU General Public License v2.0 or later"
+                url = "https://www.gnu.org/licenses/gpl-2.0.html"
             }
         }
-    }
-    repositories {
-        maven {
-            name = "MavenCentral"
-            url = uri(
-                if (version.toString().endsWith("SNAPSHOT"))
-                    "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                else
-                    "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            )
-            credentials {
-                username = providers.gradleProperty("ossrhUsername").orNull
-                password = providers.gradleProperty("ossrhPassword").orNull
+        developers {
+            developer {
+                id = "edward3h"
+                name = "Edward Harman"
+                email = "jaq@ethelred.org"
             }
+        }
+        scm {
+            connection = "scm:git:git://github.com/edward3h/town-names-openttd.git"
+            developerConnection = "scm:git:ssh://github.com/edward3h/town-names-openttd.git"
+            url = "https://github.com/edward3h/town-names-openttd"
         }
     }
 }
 
 signing {
-    val signingKey = System.getenv("SIGNING_SECRET_KEY")
-    if (signingKey != null) {
-        useInMemoryPgpKeys(
-            System.getenv("SIGNING_KEY_ID"),
-            signingKey,
-            System.getenv("SIGNING_PASSWORD")
-        )
-        // sign(publishing.publications) signs all publications lazily — safe in convention plugins.
-        // The original subproject files used sign(publishing.publications["mavenJava"]) which
-        // resolves the publication eagerly and is not safe when signing is in a convention plugin.
-        sign(publishing.publications)
-    }
+    val signingKey = findProperty("signingKey").toString()
+    val signingPassword = findProperty("signingPassword").toString()
+    useInMemoryPgpKeys(signingKey, signingPassword)
 }
