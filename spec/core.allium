@@ -13,6 +13,7 @@
 
 given {
     registry: BundledGrfRegistry
+    builtins: BuiltinGeneratorRegistry
 }
 
 ------------------------------------------------------------
@@ -28,16 +29,25 @@ external entity BundledGrfRegistry {
     available_names: List<String>
 }
 
+external entity BuiltinGeneratorRegistry {
+    -- The set of language-specific name generators compiled into the library,
+    -- ported from OpenTTD (e.g. ENGLISH_ORIGINAL, FRENCH, GERMAN, SILLY).
+    -- Names correspond to the BuiltinSet enum in the Java implementation.
+    -- Content is fixed at compile time; no runtime discovery is required.
+    available_names: List<String>
+}
+
 ------------------------------------------------------------
 -- Entities and Variants
 ------------------------------------------------------------
 
 entity NameGenerator {
+    builtin_sources: List<String>   -- names of built-in generators e.g. "ENGLISH_ORIGINAL"
     bundled_sources: List<String>   -- names referencing bundled GRFs e.g. "uk-towns"
-    file_sources: List<String>      -- absolute file system paths to valid .grf files
+    file_sources: List<String>      -- file system paths to valid .grf files (java.nio.file.Path in the Java API)
     seed: Integer?
 
-    total_sources: bundled_sources.count + file_sources.count
+    total_sources: builtin_sources.count + bundled_sources.count + file_sources.count
     is_seeded: seed != null
 }
 
@@ -46,13 +56,15 @@ entity NameGenerator {
 ------------------------------------------------------------
 
 rule CreateGenerator {
-    when: CreateGenerator(bundled_sources, file_sources, seed?)
+    when: CreateGenerator(builtin_sources, bundled_sources, file_sources, seed?)
+    requires: builtin_sources.all(n => n in builtins.available_names)
     requires: bundled_sources.all(n => n in registry.available_names)
     let valid_files = readable_grf_files(file_sources)
     let invalid_files = unreadable_grf_files(file_sources)
-    requires: bundled_sources.count + valid_files.count > 0
+    requires: builtin_sources.count + bundled_sources.count + valid_files.count > 0
     ensures:
         let generator = NameGenerator.created(
+            builtin_sources: builtin_sources,
             bundled_sources: bundled_sources,
             file_sources: valid_files,
             seed: seed
@@ -63,12 +75,12 @@ rule CreateGenerator {
         -- readable_grf_files filters file_sources to those that are both
         -- accessible on the file system and contain parseable Action 0F data.
         -- unreadable_grf_files is the complement set.
-        -- If at least one source is valid (bundled or file), a generator is
+        -- If at least one source is valid (builtin, bundled or file), a generator is
         -- returned together with any skipped sources as warnings. If all
         -- sources are invalid, the requires fails and the caller receives
         -- an error with no generator.
-        -- Unknown bundled names (not in registry.available_names) always
-        -- cause an immediate failure — they indicate a developer error.
+        -- Unknown builtin or bundled names always cause an immediate failure —
+        -- they indicate a developer error.
 }
 
 rule GenerateName {
@@ -95,6 +107,16 @@ rule GenerateNames {
         -- or in bulk.
 }
 
+rule ListBuiltinNames {
+    when: ListBuiltinNames()
+    ensures: BuiltinNamesListed(names: builtins.available_names)
+
+    @guidance
+        -- Returns the names of all built-in generator sets compiled into
+        -- the library. These names are valid values for the builtin_sources
+        -- parameter of CreateGenerator.
+}
+
 ------------------------------------------------------------
 -- Invariants
 ------------------------------------------------------------
@@ -105,11 +127,12 @@ invariant GeneratorHasSources {
 }
 
 @invariant DeterministicWithSeed
-    -- Two NameGenerators with identical seed, identical bundled_sources
-    -- (same names in the same order) and identical file_sources (same
-    -- paths in the same order) produce byte-identical name sequences
-    -- for any identical sequence of GenerateName calls. GenerateNames(g, n)
-    -- produces the same sequence as n sequential GenerateName calls on g.
+    -- Two NameGenerators with identical seed, identical builtin_sources
+    -- (same names in the same order), identical bundled_sources (same names
+    -- in the same order) and identical file_sources (same paths in the same
+    -- order) produce byte-identical name sequences for any identical sequence
+    -- of GenerateName calls. GenerateNames(g, n) produces the same sequence
+    -- as n sequential GenerateName calls on g.
 
 @invariant GeneratedNamesNonEmpty
     -- Every name returned by GenerateName or GenerateNames is a
@@ -121,9 +144,10 @@ invariant GeneratorHasSources {
 
 surface NameGenerationApi {
     provides:
-        CreateGenerator(bundled_sources, file_sources, seed?)
+        CreateGenerator(builtin_sources, bundled_sources, file_sources, seed?)
         GenerateName(generator)
         GenerateNames(generator, count)
+        ListBuiltinNames()
 
     @guarantee IsolatedGeneratorState
         -- Each NameGenerator instance holds independent RNG state.
@@ -136,4 +160,6 @@ surface NameGenerationApi {
         -- callers may log or surface the skipped paths as warnings.
         -- To discover available bundled GRF names, callers inspect
         -- registry.available_names from the module-level BundledGrfRegistry.
+        -- To discover available built-in generator names, call ListBuiltinNames()
+        -- or inspect builtins.available_names.
 }

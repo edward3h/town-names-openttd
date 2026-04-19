@@ -159,8 +159,11 @@ surface BananasClientApi {
         -- already in the cache never triggers a network request.
 
     @guarantee CacheGrowOnly
-        -- The cache directory is append-only in this version.
-        -- Existing cached files are never removed or overwritten.
+        -- The cache directory grows monotonically in this version: files with
+        -- new cache keys are added but never explicitly deleted. A file may be
+        -- replaced by a subsequent download with the same key (same content_id
+        -- and version), for example to recover from a corrupted partial write.
+        -- Files with distinct keys are never removed or overwritten.
 
     @guarantee SearchResultsOrdering
         -- Result ordering from SearchBananas follows server-defined ordering.
