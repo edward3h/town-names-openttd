@@ -1,4 +1,4 @@
-val junitVersion = "6.0.3"
+val junitVersion = "6.1.3"
 
 plugins {
     `java-library`
